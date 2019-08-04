@@ -16,10 +16,12 @@ laspaf <- gap %>%
   gs_read(ws = "Datos")
 laspaf <- as.data.frame(laspaf)
 rm(my_sheets,gap)
+laspaf <- laspaf[,c(1:2,8:41)]
 
 laspaf$SAR <- (laspaf$Nas)/sqrt((laspaf$Cas+laspaf$Mgs)/2)
 laspaf$PSI <- (laspaf$Na)*100/laspaf$CIC
 
+table(laspaf$Txt)
 ##################################
 #Modelamiento Exploratorio
 ##################################
