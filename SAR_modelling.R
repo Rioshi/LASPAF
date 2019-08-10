@@ -43,8 +43,8 @@ textura[,"EU"]<-TT.points.in.classes( #European Soil Map
 )
 textura$EU <- as.factor(textura$EU)
 levels(textura$EU) #para ver el orden
-levels(textura$EU) <- c("Gruesa","Fina","Fina y Media", "Media", "Medio Fina","Media y Gruesa",
-                        "Media y Medio Fina","Muy fina")
+levels(textura$EU) <- c("Gruesa","Fina","Fina", "Media", "Medio Fina","Media",
+                        "Medio Fina","Muy fina")
 textura$EU <- as.character(textura$EU)
 
 #1.4 Clase textural por USDA
@@ -53,10 +53,19 @@ textura[,"USDA"] <- TT.points.in.classes(
   class.sys = "USDA.TT",
   PiC.type = "t", collapse = ";"
 )
+textura$USDA <- as.factor(textura$USDA)
+levels(textura$USDA) #para ver el orden
+levels(textura$USDA) <- c("Arcilloso","Arcilloso","Arcilloso","Franco Arcilloso",
+                          "Franco","Franco","Arena Franca", "Arena Franca",
+                          "Arenoso","Arcillo Arenoso","Franco Arcillo Arenoso","Franco Arcillo Arenoso",
+                          "Franco Arenoso", "Franco Arenoso","Limoso","Arcillo Limoso",
+                          "Franco Arcillo Limoso","Franco Limoso")
+textura$USDA <- as.character(textura$USDA)
 
 #1.5 Agregar clase textural a laspaf
 laspaf[textura$ID,"USDA"] <- textura$USDA
 laspaf[textura$ID,"EU"] <- textura$EU
+
 
 ##################################
 #2 Preparar la base de datos
@@ -65,29 +74,46 @@ laspaf[textura$ID,"EU"] <- textura$EU
 #2.1 Crear SAR y PSI
 laspaf$SAR <- (laspaf$Nas)/sqrt((laspaf$Cas+laspaf$Mgs)/2)
 laspaf$PSI <- (laspaf$Na)*100/laspaf$CIC
+laspaf$ESR <- (laspaf$Na)/(laspaf$CIC-laspaf$Na)
 
 #2.2 Filtrar variables de interes
-laspaf <- laspaf[,c(1:3,13,41:42,62:63)]
+laspaf <- laspaf[,c(1:3,9,12:13,16,19,41:42,62:64)]
 
 #2.3 Extraer suelos minerales
 unique(laspaf$Txt)
 laspaf <- laspaf[-which(laspaf$Txt=="Muestra materia organica"),]
 laspaf <- laspaf[-which(laspaf$Txt=="Suelo Orgánico"),]
 laspaf <- laspaf[-which(laspaf$Txt=="Material orgánico"),]
+laspaf <- laspaf[,-6]
+
+laspaf$USDA <- as.factor(laspaf$USDA)
+laspaf$EU <- as.factor(laspaf$EU)
 
 ##################################
 #3 Analisis Exploratorio de datos
 ##################################
 
 #3.1 Resumen estadistico
-summary(laspaf[,5:6])
+summary(laspaf)
 boxplot(laspaf$PSI)
 boxplot(laspaf$SAR)
-laspaf<- subset(laspaf,SAR<100)
+laspaf<- subset(laspaf,SAR<100 & ESR <= 1)
+
+#laspaf1 <- subset(laspaf,SAR<12 & PSI <15)
+
+
+#3.2 Correlacion entre variables
+cortab <- laspaf[,c(4:9,12)]
+cortab <- na.omit(cortab)
+agricolae::correlation(cortab)
+
 
 ##################################
 #3 Modelamiento Exploratorio
 ##################################
+mod0 <- lm(PSI~.,na.action = na.omit,data=laspaf[,4:9,12])
+summary(mod0)
+step()
 
 #3.1 Modelo lineal general
 mod1 <- lm(SAR~PSI,na.action = na.omit,data=laspaf)
@@ -164,6 +190,9 @@ AIC(mod4)
 ##################################
 mod5 <- glm(SAR~PSI,data=laspaf,
                  family=inverse.gaussian(link=identity))
+
+mod5 <- glm(ESR~SAR,data=laspaf1,
+            family=inverse.gaussian(link=identity))
 
 ##################################
 #Modelamiento GLM doble
